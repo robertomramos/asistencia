@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0A1728">
+<title>Asistencia en vivo · Conferencias Magistrales 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════
+   OAD · Tablero de asistencia en vivo
+   16:9, sin scroll, legible a distancia. Tres columnas, una
+   por grupo, con la asistencia de cada conferencia.
+   ═══════════════════════════════════════════════════════════ */
+
+:root{
+  --noche:#0A1728; --tinta:#12294A; --panel:#152F52; --linea:#24466F;
+  --oro:#F0B323; --cielo:#5B9BD5; --hueso:#E9EEF5; --gris:#8FA6C2;
+  --verde:#3FBF7F;
+  --display:"Big Shoulders Display",sans-serif;
+  --texto:"IBM Plex Sans",sans-serif;
+  --mono:"IBM Plex Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--texto);background:var(--noche);color:var(--hueso);
+  display:flex;flex-direction:column}
+
+/* ── Cabecera ─────────────────────────────────────────── */
+.cab{display:flex;align-items:center;gap:20px;padding:18px 30px;
+  border-bottom:1px solid var(--linea);position:relative;flex-shrink:0}
+.cab::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;
+  background:linear-gradient(90deg,var(--oro) 0 50%,var(--cielo) 50% 100%)}
+.escudos{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.escudos img{height:56px;display:block}
+.escudos img.r{width:56px;border-radius:50%}
+.cab .txt{flex:1;min-width:0}
+.cab .k{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--oro);font-weight:700}
+.cab h1{font-family:var(--display);font-weight:800;
+  font-size:clamp(26px,3.3vw,44px);line-height:.95;letter-spacing:.01em;margin-top:4px}
+.cab .sede{font-size:12.5px;color:var(--gris);margin-top:3px}
+
+.global{display:flex;gap:26px;flex-shrink:0;text-align:right}
+.gd .v{font-family:var(--display);font-size:clamp(28px,3vw,42px);font-weight:800;line-height:.85}
+.gd .k{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gris);font-weight:700;margin-top:5px}
+.gd.oro .v{color:var(--oro)}
+
+/* ── Columnas por grupo ───────────────────────────────── */
+.cuerpo{flex:1;display:grid;grid-template-columns:repeat(3,1fr);
+  gap:14px;padding:18px 22px;min-height:0}
+
+.grupo{background:var(--tinta);border:1px solid var(--linea);
+  border-top:4px solid var(--oro);border-radius:14px;padding:16px 15px;
+  display:flex;flex-direction:column;min-width:0}
+.grupo[data-g="2"]{border-top-color:var(--cielo)}
+.grupo[data-g="3"]{border-top-color:#9FB4CC}
+
+.grupo .titulo{font-family:var(--display);font-size:clamp(22px,2.4vw,32px);
+  font-weight:800;line-height:.92;letter-spacing:.01em}
+.grupo .lugar{font-size:11.5px;color:var(--gris);margin-top:5px;line-height:1.4}
+.grupo .inscritos{font-family:var(--mono);font-size:11.5px;color:var(--oro);
+  font-weight:600;margin-top:7px;letter-spacing:.03em}
+
+.confs{margin-top:13px;display:flex;flex-direction:column;gap:9px;flex:1;
+  overflow:hidden;justify-content:flex-start}
+
+.c{display:block}
+.c .fila{display:flex;align-items:baseline;justify-content:space-between;gap:9px;margin-bottom:5px}
+.c .quien{flex:1;min-width:0;font-size:12.5px;font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c .cuando{font-size:10.5px;color:var(--gris);white-space:nowrap;flex-shrink:0}
+.c .cifra{font-family:var(--display);font-weight:800;font-size:clamp(19px,2.1vw,27px);
+  line-height:.85;flex-shrink:0}
+.barra{height:8px;background:rgba(10,23,40,.65);border-radius:99px;overflow:hidden}
+.rell{height:100%;border-radius:99px;background:var(--oro);
+  transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.rell.medio{background:var(--cielo)}
+.rell.alto{background:var(--verde)}
+.c.cero .cifra{color:var(--gris)}
+
+.pie{flex-shrink:0;padding:10px 30px;border-top:1px solid var(--linea);
+  display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--gris)}
+.vivo{display:flex;align-items:center;gap:7px}
+.led{width:7px;height:7px;border-radius:50%;background:var(--verde);animation:latir 2s infinite}
+@keyframes latir{0%,100%{opacity:1}50%{opacity:.3}}
+
+@media (max-aspect-ratio:1/1), (max-width:900px){
+  html,body{overflow:auto}
+  .cuerpo{grid-template-columns:1fr}
+  .confs{overflow:visible}
+  .global{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="cab">
+  <div class="escudos">
+    <img src="logo-carrera.png" alt="Carrera de Contaduría Pública" onerror="this.style.display='none'">
+    <img class="r" src="logo-oad.png" alt="OAD" onerror="this.style.display='none'">
+  </div>
+  <div class="txt">
+    <p class="k">Asistencia en vivo</p>
+    <h1>CONFERENCIAS MAGISTRALES 2026</h1>
+    <p class="sede">24 al 28 de agosto · Quincuagésimo sexto aniversario de la Carrera de Contaduría Pública</p>
+  </div>
+  <div class="global">
+    <div class="gd"><div class="v" id="g-inscritos">—</div><div class="k">Inscritos</div></div>
+    <div class="gd oro"><div class="v" id="g-asistencias">—</div><div class="k">Asistencias</div></div>
+  </div>
+</header>
+
+<main class="cuerpo" id="cuerpo"></main>
+
+<footer class="pie">
+  <span>Organización de Auxiliares de Docencia · Gestión 2026 · Carrera de Contaduría Pública · UMSA</span>
+  <span class="vivo"><span class="led"></span> <span id="latido">En vivo</span></span>
+</footer>
+
+<script>
+'use strict';
+
+/* Pega aquí la misma URL /exec de la aplicación web. */
+var API = 'PEGAR_AQUI_LA_URL_DE_LA_APLICACION_WEB';
+
+var jn = 0;
+function jsonp(params, ok, fallo, ms){
+  var nombre = '__t' + (++jn) + '_' + Date.now();
+  var s = document.createElement('script');
+  var listo = false;
+  var reloj = setTimeout(function(){ if(!listo){ limpiar(); if(fallo) fallo(); } }, ms || 15000);
+
+  function limpiar(){
+    listo = true; clearTimeout(reloj);
+    try{ delete window[nombre]; }catch(e){ window[nombre] = undefined; }
+    if (s.parentNode) s.parentNode.removeChild(s);
+  }
+  window[nombre] = function(d){ limpiar(); ok(d); };
+
+  var q = [];
+  for (var k in params) if (params.hasOwnProperty(k))
+    q.push(encodeURIComponent(k) + '=' + encodeURIComponent(params[k]));
+  q.push('callback=' + nombre);
+
+  s.src = API + (API.indexOf('?') > -1 ? '&' : '?') + q.join('&');
+  s.onerror = function(){ if(!listo){ limpiar(); if(fallo) fallo(); } };
+  document.head.appendChild(s);
+}
+
+function esc(t){
+  return String(t == null ? '' : t)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function pintar(d){
+  var h = '', totalIns = 0, totalAsis = 0;
+
+  for (var i = 0; i < d.grupos.length; i++){
+    var g = d.grupos[i];
+    totalIns += g.inscritos;
+
+    h += '<article class="grupo" data-g="' + g.g + '">' +
+           '<p class="titulo">' + esc(g.nombre.toUpperCase()) + '</p>' +
+           '<p class="lugar">' + esc(g.sede) + ' · ' + esc(g.sala) + '</p>' +
+           '<p class="inscritos">' + g.inscritos + ' inscritos · mínimo ' +
+             g.minimo + ' de ' + g.totalConf + '</p>' +
+           '<div class="confs">';
+
+    for (var j = 0; j < g.confs.length; j++){
+      var c = g.confs[j];
+      totalAsis += c.asistentes;
+      var pct = g.inscritos ? Math.round(c.asistentes / g.inscritos * 100) : 0;
+      var clase = pct >= 60 ? 'alto' : (pct >= 30 ? 'medio' : '');
+
+      h += '<div class="c' + (c.asistentes ? '' : ' cero') + '">' +
+             '<div class="fila">' +
+               '<span class="quien">' + esc(c.exp) + '</span>' +
+               '<span class="cuando">' + esc(c.dia) + '</span>' +
+               '<span class="cifra">' + c.asistentes + '</span>' +
+             '</div>' +
+             '<div class="barra"><div class="rell ' + clase + '" style="width:' + Math.min(pct,100) + '%"></div></div>' +
+           '</div>';
+    }
+    h += '</div></article>';
+  }
+
+  document.getElementById('cuerpo').innerHTML = h;
+  document.getElementById('g-inscritos').textContent = totalIns;
+  document.getElementById('g-asistencias').textContent = totalAsis;
+}
+
+function actualizar(){
+  jsonp({ accion:'tablero' }, function(d){
+    if (d && d.ok){
+      pintar(d);
+      document.getElementById('latido').textContent = 'En vivo';
+    }
+  }, function(){
+    document.getElementById('latido').textContent = 'Reconectando';
+  });
+}
+
+if (API.indexOf('http') !== 0){
+  document.getElementById('cuerpo').innerHTML =
+    '<p style="color:#E15241;padding:30px;font-size:15px;grid-column:1/-1">' +
+    'Falta pegar la dirección de la aplicación web en este archivo (variable API).</p>';
+} else {
+  actualizar();
+  setInterval(actualizar, 15000);
+}
+</script>
+</body>
+</html>
