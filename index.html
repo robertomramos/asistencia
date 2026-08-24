@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0A1728">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<title>Escáner · OAD 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --noche:#0A1728; --panel:#12294A; --panel2:#1A3760; --linea:#24466F;
+  --hueso:#E9EEF5; --gris:#8FA6C2; --oro:#F0B323; --cielo:#5B9BD5;
+  --ok:#0E8A46; --warn:#C77800; --bad:#C0392B; --r:14px;
+  --display:"Big Shoulders Display",sans-serif;
+  --texto:"IBM Plex Sans",-apple-system,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:var(--texto);background:var(--noche);color:var(--hueso);
+  overscroll-behavior:none;-webkit-user-select:none;user-select:none}
+.pantalla{display:none;min-height:100dvh;flex-direction:column}
+.pantalla.on{display:flex}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:calc(env(safe-area-inset-top) + 13px) 16px 13px;
+  border-bottom:1px solid var(--linea);background:var(--noche);position:relative}
+.top::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;
+  background:linear-gradient(90deg,var(--oro) 0 50%,var(--cielo) 50% 100%)}
+.top .marca{display:flex;align-items:center;gap:10px;min-width:0}
+.escudos{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.escudos img{height:30px;display:block}.escudos img.r{width:30px;border-radius:50%}
+.top h1{font-family:var(--display);font-size:21px;font-weight:800;line-height:.95}
+.eyebrow{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--oro);font-weight:700}
+.atras{padding:9px 13px;background:transparent;border:1.5px solid var(--linea);
+  border-radius:9px;color:var(--hueso);font-size:13px;font-weight:600;font-family:var(--texto);cursor:pointer;flex-shrink:0}
+
+.cuerpo{flex:1;overflow-y:auto;padding:18px 16px calc(env(safe-area-inset-bottom) + 24px)}
+.bloque{background:var(--panel);border:1px solid var(--linea);border-radius:var(--r);padding:18px;margin-bottom:13px}
+.bloque h2{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gris);margin-bottom:14px}
+label{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gris);margin:0 0 7px;font-weight:600}
+label + label{margin-top:16px}
+input{width:100%;padding:14px;background:var(--panel2);border:1.5px solid var(--linea);
+  border-radius:11px;color:var(--hueso);font-size:16px;font-family:var(--mono)}
+input:focus{outline:none;border-color:var(--oro)}
+input::placeholder{color:#5A738F}
+
+.btn{width:100%;padding:16px;margin-top:16px;border:0;border-radius:11px;
+  background:var(--oro);color:var(--panel);font-size:15px;font-weight:700;font-family:var(--texto);cursor:pointer}
+.btn:active{transform:scale(.985)}
+.btn[disabled]{opacity:.45}
+.btn.ghost{background:transparent;border:1.5px solid var(--linea);color:var(--hueso)}
+.btn.peligro{background:transparent;border:1.5px solid #5A2320;color:#F09189}
+.fila-btn{display:flex;gap:10px}.fila-btn .btn{margin-top:0}
+.nota{font-size:12px;color:var(--gris);line-height:1.55;margin-top:10px}
+.aviso{padding:12px 14px;border-radius:11px;font-size:13px;line-height:1.55;margin-top:12px;display:none;white-space:pre-line}
+.aviso.err{background:#2E1416;color:#F3A9A2;display:block}
+.aviso.ok{background:#0D2A1A;color:#7FDCA6;display:block}
+.aviso.info{background:#12294A;color:#A9BCD4;display:block}
+
+.grupo{display:block;width:100%;text-align:left;background:var(--panel);
+  border:1.5px solid var(--linea);border-left-width:5px;border-radius:var(--r);
+  padding:17px;margin-bottom:11px;color:var(--hueso);font-family:var(--texto);cursor:pointer}
+.grupo:active{border-color:var(--oro)}
+.grupo[data-g="1"]{border-left-color:var(--oro)}
+.grupo[data-g="2"]{border-left-color:var(--cielo)}
+.grupo[data-g="3"]{border-left-color:#9FB4CC}
+.grupo .k{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gris);font-weight:700;margin-bottom:5px}
+.grupo .t{font-family:var(--display);font-size:24px;font-weight:800;line-height:.98}
+.grupo .m{font-size:12px;color:var(--gris);margin-top:6px;line-height:1.5}
+
+.sem{display:flex;align-items:flex-start;gap:14px;width:100%;text-align:left;
+  background:var(--panel);border:1.5px solid var(--linea);border-radius:var(--r);
+  padding:14px 16px;margin-bottom:9px;color:var(--hueso);font-family:var(--texto);cursor:pointer}
+.sem:active{border-color:var(--oro)}
+.sem[data-estado="cerrada"]{opacity:.42}
+.sem[data-estado="activa"]{border-color:var(--ok);background:#0F3325}
+.sem .num{font-family:var(--display);font-size:26px;font-weight:800;color:var(--oro);
+  width:30px;flex-shrink:0;text-align:center;line-height:1.1}
+.sem .txt{flex:1;min-width:0}
+.sem .t{font-size:15px;font-weight:600;line-height:1.3}
+.sem .m{font-size:12px;color:var(--gris);margin-top:4px;line-height:1.45}
+.sem .badge{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 8px;border-radius:99px;display:inline-block;margin-top:6px}
+.badge.abierta{background:var(--ok);color:#fff}
+.badge.pronto{background:var(--panel2);color:var(--gris)}
+.badge.cerrada{background:#3A1A18;color:#E8A49C}
+.sem .sin{font-size:11px;color:#E8A49C;margin-top:5px}
+
+#vista{position:relative;flex:1;background:#000;overflow:hidden}
+#video{width:100%;height:100%;object-fit:cover;display:block}
+.mira{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.marco{width:min(64vw,260px);aspect-ratio:1;position:relative}
+.marco i{position:absolute;width:34px;height:34px;border:3px solid var(--oro)}
+.marco i:nth-child(1){top:0;left:0;border-right:0;border-bottom:0;border-top-left-radius:14px}
+.marco i:nth-child(2){top:0;right:0;border-left:0;border-bottom:0;border-top-right-radius:14px}
+.marco i:nth-child(3){bottom:0;left:0;border-right:0;border-top:0;border-bottom-left-radius:14px}
+.marco i:nth-child(4){bottom:0;right:0;border-left:0;border-top:0;border-bottom-right-radius:14px}
+
+.cinta{position:absolute;top:0;left:0;right:0;
+  padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;
+  background:linear-gradient(to bottom,rgba(10,23,40,.96),rgba(10,23,40,0));
+  display:flex;align-items:center;justify-content:space-between;gap:12px}
+.cinta .txt{min-width:0}
+.cinta .t{font-size:14px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cinta .s{font-size:11px;color:var(--gris);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.barra-inf{position:absolute;left:0;right:0;bottom:0;
+  padding:12px 14px calc(env(safe-area-inset-bottom) + 12px);
+  background:linear-gradient(to top,rgba(10,23,40,.96),rgba(10,23,40,0));
+  display:flex;align-items:center;justify-content:space-between;gap:7px;flex-wrap:wrap}
+.marcador{display:flex;gap:16px}
+.dato .v{font-family:var(--display);font-size:28px;font-weight:800;line-height:.85}
+.dato .k{font-size:9px;color:var(--gris);letter-spacing:.1em;text-transform:uppercase;margin-top:4px;font-weight:700}
+.dato.pend .v{color:var(--oro)}
+.dato.espera .v{color:var(--cielo)}
+.mini{padding:10px 12px;background:rgba(233,238,245,.1);border:1px solid rgba(233,238,245,.16);
+  border-radius:10px;color:var(--hueso);font-size:12.5px;font-weight:600;font-family:var(--texto);cursor:pointer}
+.mini.on{background:var(--oro);color:var(--panel);border-color:var(--oro)}
+.mini.alerta{background:var(--warn);border-color:var(--warn);color:#1C1000}
+
+#reloj{position:absolute;top:calc(env(safe-area-inset-top) + 62px);left:0;right:0;
+  text-align:center;pointer-events:none}
+#reloj span{font-family:var(--mono);font-size:12px;font-weight:600;
+  background:rgba(10,23,40,.78);padding:5px 12px;border-radius:99px;display:inline-block}
+#reloj.abierto span{color:#7FDCA6}
+#reloj.pronto span{color:var(--gris)}
+#reloj.cerrado span{color:#F3A9A2}
+
+#flash{position:fixed;inset:0;z-index:90;display:none;flex-direction:column;
+  align-items:center;justify-content:center;padding:32px 24px;text-align:center;
+  animation:entra .15s cubic-bezier(.2,.9,.3,1)}
+@keyframes entra{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
+#flash.ok{background:var(--ok)}#flash.warn{background:var(--warn)}#flash.bad{background:var(--bad)}
+#flash .sim{font-family:var(--display);font-size:66px;font-weight:800;line-height:.8;margin-bottom:14px}
+#flash .est{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.75);font-weight:700;margin-bottom:12px}
+#flash .quien{font-family:var(--display);font-size:clamp(28px,8.5vw,44px);font-weight:800;
+  line-height:.98;color:#fff;overflow-wrap:break-word}
+#flash .ru{font-family:var(--mono);font-size:16px;color:rgba(255,255,255,.8);margin-top:12px;letter-spacing:.08em}
+#flash .msg{font-size:15px;color:rgba(255,255,255,.92);margin-top:16px;line-height:1.5;max-width:330px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.pie{text-align:center;font-size:11px;color:#5A738F;margin-top:20px;line-height:1.7}
+</style>
+</head>
+<body>
+
+<!-- ═══ 1 · CONFIGURACIÓN ═══════════════════════════════ -->
+<section class="pantalla on" id="p-config">
+  <div class="top"><div class="marca">
+    <div class="escudos">
+      <img src="logo-carrera.png" alt="Carrera" onerror="this.style.display='none'">
+      <img class="r" src="logo-oad.png" alt="OAD" onerror="this.style.display='none'">
+    </div>
+    <div><p class="eyebrow">Configuración</p><h1>CONECTAR</h1></div>
+  </div></div>
+  <div class="cuerpo">
+    <div class="bloque">
+      <h2>Datos de conexión</h2>
+      <label for="i-url">Dirección de la aplicación web</label>
+      <input id="i-url" placeholder="https://script.google.com/…/exec" inputmode="url" autocomplete="off" spellcheck="false">
+      <label for="i-clave">Tu código personal</label>
+      <input id="i-clave" placeholder="XXXXXX" autocomplete="off" spellcheck="false" maxlength="10" style="text-transform:uppercase">
+      <button class="btn" id="b-conectar">Conectar y descargar la lista</button>
+      <button class="btn ghost" id="b-probar" style="margin-top:10px">Probar conexión</button>
+      <div class="aviso" id="a-config"></div>
+      <p class="nota">Cada persona usa su propio código. Necesitas internet solo en este paso;
+        después el escáner funciona sin señal.</p>
+    </div>
+    <p class="pie">Organización de Auxiliares de Docencia · Gestión 2026<br>Carrera de Contaduría Pública · UMSA</p>
+  </div>
+</section>
+
+
+<!-- ═══ 2 · GRUPO ═══════════════════════════════════════ -->
+<section class="pantalla" id="p-grupo">
+  <div class="top"><div class="marca">
+    <div class="escudos">
+      <img src="logo-carrera.png" alt="Carrera" onerror="this.style.display='none'">
+      <img class="r" src="logo-oad.png" alt="OAD" onerror="this.style.display='none'">
+    </div>
+    <div><p class="eyebrow" id="e-quien">Personal</p><h1>¿QUÉ GRUPO?</h1></div>
+  </div></div>
+  <div class="cuerpo">
+    <div id="lista-grupos"></div>
+    <div class="bloque">
+      <h2>Dispositivo</h2>
+      <p class="nota" id="t-estado" style="margin-top:0"></p>
+      <div class="fila-btn" style="margin-top:14px">
+        <button class="btn ghost" id="b-actualizar">Actualizar lista</button>
+        <button class="btn peligro" id="b-salir">Desconectar</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══ 3 · CONFERENCIA ═════════════════════════════════ -->
+<section class="pantalla" id="p-conf">
+  <div class="top">
+    <div class="marca"><div><p class="eyebrow" id="e-grupo">Grupo</p><h1>¿CUÁL?</h1></div></div>
+    <button class="atras" id="b-atras">Atrás</button>
+  </div>
+  <div class="cuerpo"><div id="lista-confs"></div></div>
+</section>
+
+
+<!-- ═══ 4 · ESCANEO ═════════════════════════════════════ -->
+<section class="pantalla" id="p-scan">
+  <div id="vista">
+    <video id="video" playsinline muted autoplay></video>
+    <div class="cinta">
+      <div class="txt"><div class="t" id="c-nombre">—</div><div class="s" id="c-sub">—</div></div>
+      <button class="mini" id="b-volver">Cambiar</button>
+    </div>
+    <div id="reloj"><span id="reloj-txt">—</span></div>
+    <div class="mira"><div class="marco"><i></i><i></i><i></i><i></i></div></div>
+    <div class="barra-inf">
+      <div class="marcador">
+        <div class="dato"><div class="v" id="m-total">0</div><div class="k">Registrados</div></div>
+        <div class="dato espera"><div class="v" id="m-espera">0</div><div class="k">En fila</div></div>
+        <div class="dato pend"><div class="v" id="m-pend">0</div><div class="k">Por enviar</div></div>
+      </div>
+      <button class="mini" id="b-otros">Otros grupos</button>
+      <button class="mini" id="b-manual">Manual</button>
+      <button class="mini" id="b-enviar">Enviar</button>
+      <button class="mini" id="b-luz">Luz</button>
+    </div>
+  </div>
+</section>
+
+
+<div id="flash">
+  <div class="sim" id="f-sim"></div>
+  <div class="est" id="f-est"></div>
+  <div class="quien" id="f-quien"></div>
+  <div class="ru" id="f-ru"></div>
+  <div class="msg" id="f-msg"></div>
+</div>
+
+<canvas id="lienzo" hidden></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script>
+'use strict';
+
+/* ══════════════════════════════════════════════════════════
+   OAD 2026 · Escáner de asistencia
+
+   Nada espera a la red: el escaneo se valida contra la lista
+   guardada en el celular y se confirma al instante. El envío
+   ocurre después, en segundo plano, y reintenta solo.
+
+   La comunicación intenta primero fetch (que atraviesa los
+   escudos de Brave, Firefox estricto y similares) y solo cae
+   a JSONP si fetch falla. Dos caminos independientes.
+   ══════════════════════════════════════════════════════════ */
+
+var LL = { cfg:'oadX.cfg', padron:'oadX.padron', cola:'oadX.cola',
+           hechos:'oadX.hechos', espera:'oadX.espera' };
+
+var S = {
+  cfg:null, padron:null, mapa:{}, confs:{},
+  grupo:null, conf:null,
+  cola:[], hechos:{}, espera:{},
+  ultimo:'', tUltimo:0, pausa:false,
+  stream:null, track:null, luz:false, detector:null,
+  sincro:false, ultimoEnvioOk:Date.now(), buscando:{},
+  ultimoPadron:0, desfase:0, otros:false, pinOk:false,
+  ticReloj:null
+};
+
+function guardar(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+function leer(k){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):null; }catch(e){ return null; } }
+function ver(id){
+  var t=document.querySelectorAll('.pantalla');
+  for(var i=0;i<t.length;i++) t[i].classList.remove('on');
+  document.getElementById(id).classList.add('on');
+}
+function aviso(el,txt,tipo){ var e=document.getElementById(el); e.textContent=txt; e.className='aviso '+(tipo||'err'); }
+function ahora(){ return Date.now() + S.desfase; }
+function hhmm(ms){ var d=new Date(ms); var p=function(x){return (x<10?'0':'')+x;}; return p(d.getHours())+':'+p(d.getMinutes()); }
+
+
+/* ══ Transporte: fetch primero, JSONP de respaldo ════════ */
+var jn = 0;
+
+function jsonp(params, ok, fallo, ms){
+  var nombre='__s'+(++jn)+'_'+Date.now();
+  var s=document.createElement('script'), listo=false;
+  var reloj=setTimeout(function(){ if(!listo){ limpiar(); if(fallo) fallo('tiempo'); } }, ms||15000);
+  function limpiar(){
+    listo=true; clearTimeout(reloj);
+    try{ delete window[nombre]; }catch(e){ window[nombre]=undefined; }
+    if(s.parentNode) s.parentNode.removeChild(s);
+  }
+  window[nombre]=function(d){ limpiar(); ok(d); };
+  var q=[];
+  for(var k in params) if(params.hasOwnProperty(k))
+    q.push(encodeURIComponent(k)+'='+encodeURIComponent(params[k]));
+  q.push('callback='+nombre);
+  s.src=S.cfg.url+(S.cfg.url.indexOf('?')>-1?'&':'?')+q.join('&');
+  s.onerror=function(){ if(!listo){ limpiar(); if(fallo) fallo('red'); } };
+  document.head.appendChild(s);
+}
+
+function pedir(params, ok, fallo, ms){
+  ms = ms || 15000;
+  var q=[];
+  for(var k in params) if(params.hasOwnProperty(k))
+    q.push(encodeURIComponent(k)+'='+encodeURIComponent(params[k]));
+  var url = S.cfg.url + (S.cfg.url.indexOf('?')>-1?'&':'?') + q.join('&');
+
+  var ctl = null, reloj = null;
+  try { ctl = new AbortController(); reloj = setTimeout(function(){ ctl.abort(); }, ms); } catch(e){}
+
+  var op = { method:'GET', redirect:'follow' };
+  if (ctl) op.signal = ctl.signal;
+
+  try {
+    fetch(url, op).then(function(r){
+      if (reloj) clearTimeout(reloj);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function(d){ ok(d); })
+      .catch(function(){ jsonp(params, ok, fallo, ms); });
+  } catch(e) {
+    jsonp(params, ok, fallo, ms);
+  }
+}
+
+
+/* ══ Prueba de conexión ══════════════════════════════════ */
+document.getElementById('b-probar').addEventListener('click', function(){
+  var url = document.getElementById('i-url').value.trim();
+  var clave = document.getElementById('i-clave').value.trim().toUpperCase();
+  var b = this;
+
+  if (url.indexOf('https://') !== 0 || url.indexOf('/exec') === -1){
+    aviso('a-config','La dirección debe empezar con https:// y terminar en /exec.\n\n' +
+      'Cópiala del menú OAD ▸ Enlaces, PIN y códigos.');
+    return;
+  }
+
+  S.cfg = { url:url, clave:clave, oper:'' };
+  b.disabled = true; b.textContent = 'Probando…';
+  aviso('a-config','Paso 1 de 2 · contactando al servidor…','info');
+
+  pedir({ accion:'ping' }, function(d){
+    if (!d || !d.ok){
+      b.disabled=false; b.textContent='Probar conexión';
+      aviso('a-config','El servidor respondió algo inesperado.\n\n' +
+        'Revisa que la implementación esté publicada como "Cualquier persona".');
+      return;
+    }
+    if (!clave){
+      b.disabled=false; b.textContent='Probar conexión';
+      aviso('a-config','Servidor accesible ✓\n\nFalta escribir tu código personal para probar el acceso.','ok');
+      return;
+    }
+    aviso('a-config','Servidor accesible ✓\nPaso 2 de 2 · verificando tu código…','info');
+    pedir({ accion:'padron', clave:clave }, function(d2){
+      b.disabled=false; b.textContent='Probar conexión';
+      if (d2 && d2.ok){
+        aviso('a-config','Todo correcto ✓\n\n' +
+          'Servidor accesible · código válido · ' + d2.personas.length + ' inscritos.\n' +
+          'Eres ' + d2.quien.nombre + ' (' + d2.quien.rol + ').','ok');
+      } else {
+        aviso('a-config','El servidor responde, pero tu código no pasó.\n\n' +
+          ((d2 && d2.error) || 'Código no reconocido.'));
+      }
+    }, function(){
+      b.disabled=false; b.textContent='Probar conexión';
+      aviso('a-config','El servidor respondió al ping pero falló al pedir la lista.\nIntenta otra vez.');
+    }, 25000);
+  }, function(e){
+    b.disabled=false; b.textContent='Probar conexión';
+    aviso('a-config','No se pudo contactar al servidor.\n\n' +
+      (e === 'tiempo'
+        ? 'No respondió a tiempo. Puede ser señal lenta, o que la dirección esté mal.'
+        : 'La petición fue bloqueada. Si usas Brave, Firefox estricto, DuckDuckGo o el navegador de Samsung, ' +
+          'ábrelo en Chrome (Android) o Safari (iPhone). También revisa si tienes un bloqueador de anuncios activo.'));
+  }, 15000);
+});
+
+
+/* ══ Conectar ════════════════════════════════════════════ */
+document.getElementById('b-conectar').addEventListener('click', function(){
+  var url=document.getElementById('i-url').value.trim();
+  var clave=document.getElementById('i-clave').value.trim().toUpperCase();
+
+  if(url.indexOf('https://')!==0){ aviso('a-config','La dirección debe empezar con https:// y terminar en /exec'); return; }
+  if(!clave){ aviso('a-config','Escribe tu código personal.'); return; }
+
+  S.cfg={url:url,clave:clave,oper:''};
+  var b=this; b.disabled=true; b.textContent='Conectando…';
+
+  bajarPadron(function(ok,err){
+    b.disabled=false; b.textContent='Conectar y descargar la lista';
+    if(!ok){ aviso('a-config',err); return; }
+    S.cfg.oper = S.padron.quien.nombre;
+    guardar(LL.cfg,S.cfg);
+    aviso('a-config','Conectado como '+S.padron.quien.nombre+'.\n'+
+      S.padron.personas.length+' inscritos descargados.','ok');
+    setTimeout(irAGrupos,800);
+  });
+});
+
+function bajarPadron(cb){
+  pedir({accion:'padron',clave:S.cfg.clave}, function(d){
+    if(!d||!d.ok){ if(cb) cb(false,(d&&d.error)||'Respuesta inesperada del servidor'); return; }
+    S.padron=d; S.desfase = d.ahora - Date.now();
+    indexar(); guardar(LL.padron,d); S.ultimoPadron=Date.now();
+    if(cb) cb(true);
+  }, function(e){
+    if(cb) cb(false, e==='tiempo'
+      ? 'El servidor no respondió. Usa "Probar conexión" para ver qué falla.'
+      : 'No se pudo conectar. Prueba con Chrome o Safari, y revisa los bloqueadores.\n' +
+        'El botón "Probar conexión" te dice exactamente qué pasa.');
+  }, 30000);
+}
+
+function indexar(){
+  S.mapa={}; S.confs={};
+  var p=S.padron.personas||[];
+  for(var i=0;i<p.length;i++) S.mapa[String(p[i].r).trim()]=p[i];
+  var c=S.padron.confs||[];
+  for(var j=0;j<c.length;j++) S.confs[c[j].cod]=c[j];
+}
+
+
+/* ══ Grupos ══════════════════════════════════════════════ */
+function irAGrupos(){
+  document.getElementById('e-quien').textContent =
+    S.padron.quien.nombre + (S.padron.quien.rol === 'Moderador' ? ' · moderador' : '');
+
+  var c=document.getElementById('lista-grupos'); c.innerHTML='';
+  var g=S.padron.grupos||{};
+  Object.keys(g).sort().forEach(function(k){
+    var info=g[k], cuantos=0;
+    for(var ru in S.mapa) if(S.mapa.hasOwnProperty(ru) && String(S.mapa[ru].g)===String(k)) cuantos++;
+    var b=document.createElement('button');
+    b.className='grupo'; b.setAttribute('data-g',k);
+    b.innerHTML='<div class="k">Grupo '+k+' · '+info.conf+' conferencias · mínimo '+info.minimo+'</div>'+
+                '<div class="t"></div><div class="m"></div>';
+    b.querySelector('.t').textContent=info.nombre;
+    b.querySelector('.m').textContent=info.sede+' · '+info.sala+' · '+cuantos+' inscritos';
+    b.addEventListener('click',function(){ irAConfs(k); });
+    c.appendChild(b);
+  });
+  refrescarEstado();
+  ver('p-grupo');
+}
+
+function refrescarEstado(){
+  var n=(S.padron&&S.padron.personas)?S.padron.personas.length:0;
+  var mios=0;
+  for(var k in S.padron.quien.turnos) if(S.padron.quien.turnos.hasOwnProperty(k)) mios++;
+  document.getElementById('t-estado').textContent =
+    S.padron.quien.nombre+' · '+mios+' conferencias asignadas · '+
+    n+' inscritos guardados · '+S.cola.length+' registros por enviar';
+}
+
+
+/* ══ Conferencias ════════════════════════════════════════ */
+function estadoConf(c){
+  var t = ahora(), r = S.padron.reglas;
+  if (t < c.ini - r.antes*60000)  return 'pronto';
+  if (t > c.ini + r.despues*60000) return 'cerrada';
+  return 'activa';
+}
+
+function irAConfs(g){
+  S.grupo=g;
+  var info=S.padron.grupos[g];
+  document.getElementById('e-grupo').textContent='Grupo '+g+' · '+info.nombre;
+  var c=document.getElementById('lista-confs'); c.innerHTML='';
+  var esMod = S.padron.quien.rol === 'Moderador';
+
+  (S.padron.confs||[]).filter(function(x){ return String(x.g)===String(g); })
+    .sort(function(a,b){ return a.n-b.n; })
+    .forEach(function(x){
+      var est = estadoConf(x);
+      var tengo = esMod || !!S.padron.quien.turnos[x.cod];
+      var b=document.createElement('button');
+      b.className='sem'; b.setAttribute('data-estado', est);
+      var badge = est==='activa' ? '<span class="badge abierta">Abierta ahora</span>'
+                : est==='pronto' ? '<span class="badge pronto">Abre '+hhmm(x.ini - S.padron.reglas.antes*60000)+'</span>'
+                : '<span class="badge cerrada">Cerrada</span>';
+      b.innerHTML='<div class="num"></div><div class="txt"><div class="t"></div><div class="m"></div>'+
+        badge + (tengo?'':'<div class="sin">No tienes esta conferencia asignada</div>') + '</div>';
+      b.querySelector('.num').textContent=x.n;
+      b.querySelector('.t').textContent=x.exp;
+      b.querySelector('.m').textContent=x.dia+' · '+x.hora+' · bloque '+(x.bloque===3?'1 y 2':x.bloque);
+      b.addEventListener('click',function(){
+        if (!tengo && !confirm('Esta conferencia no está en tus turnos asignados.\n\n' +
+            'El servidor va a rechazar los registros. ¿Continuar de todos modos?')) return;
+        elegir(x);
+      });
+      c.appendChild(b);
+    });
+  ver('p-conf');
+}
+
+document.getElementById('b-atras').addEventListener('click', function(){
+  refrescarEstado(); ver('p-grupo');
+});
+
+function elegir(x){
+  S.conf=x; S.otros=false; S.pinOk=false;
+  document.getElementById('b-otros').classList.remove('on');
+  document.getElementById('b-otros').textContent='Otros grupos';
+  document.getElementById('c-nombre').textContent=x.exp;
+  document.getElementById('c-sub').textContent='C'+x.n+' · '+x.dia+' · '+x.hora+' · '+x.sala;
+  contadores();
+  arrancarReloj();
+  ver('p-scan');
+  abrirCamara();
+}
+
+document.getElementById('b-volver').addEventListener('click', function(){
+  cerrarCamara(); pararReloj(); irAConfs(S.grupo);
+});
+
+document.getElementById('b-actualizar').addEventListener('click', function(){
+  var b=this; b.disabled=true; b.textContent='Actualizando…';
+  bajarPadron(function(ok,err){
+    b.disabled=false; b.textContent='Actualizar lista';
+    if(ok) irAGrupos(); else alert(err);
+  });
+});
+
+document.getElementById('b-salir').addEventListener('click', function(){
+  if(S.cola.length>0){
+    if(!confirm('Hay '+S.cola.length+' registros sin enviar. Si desconectas ahora se pierden. ¿Continuar?')) return;
+  } else if(!confirm('¿Desconectar este escáner?')) return;
+  [LL.cfg,LL.padron,LL.cola,LL.hechos,LL.espera].forEach(function(k){ localStorage.removeItem(k); });
+  location.reload();
+});
+
+
+/* ══ Reloj de la conferencia ═════════════════════════════ */
+function arrancarReloj(){
+  pararReloj();
+  var pintar = function(){
+    if (!S.conf) return;
+    var el = document.getElementById('reloj');
+    var tx = document.getElementById('reloj-txt');
+    var est = estadoConf(S.conf), r = S.padron.reglas;
+    el.className = est === 'activa' ? 'abierto' : (est === 'pronto' ? 'pronto' : 'cerrado');
+
+    if (est === 'pronto'){
+      var faltan = Math.ceil((S.conf.ini - r.antes*60000 - ahora())/60000);
+      tx.textContent = 'Abre en ' + faltan + ' min';
+    } else if (est === 'activa'){
+      var cierra = S.conf.ini + r.despues*60000;
+      var quedan = Math.ceil((cierra - ahora())/60000);
+      tx.textContent = quedan > 0 ? 'Cierra en ' + quedan + ' min' : 'Cerrando';
+    } else {
+      tx.textContent = S.pinOk ? 'Cerrada · PIN activo' : 'Cerrada · solo con PIN';
+    }
+  };
+  pintar();
+  S.ticReloj = setInterval(pintar, 15000);
+}
+function pararReloj(){ if (S.ticReloj){ clearInterval(S.ticReloj); S.ticReloj=null; } }
+
+
+/* ══ Botones de la barra ═════════════════════════════════ */
+document.getElementById('b-otros').addEventListener('click', function(){
+  if (!S.otros){
+    if (!confirm('Abrir el ingreso a estudiantes de otros grupos.\n\n' +
+      'Hazlo solo cuando ya entraron los del grupo y todavía hay espacio.\n' +
+      'Los de otro grupo siguen necesitando dos escaneos.')) return;
+  }
+  S.otros = !S.otros;
+  this.classList.toggle('on', S.otros);
+  this.textContent = S.otros ? 'Otros ✓' : 'Otros grupos';
+});
+
+document.getElementById('b-manual').addEventListener('click', function(){
+  var ru = prompt('Número de registro universitario:');
+  if (ru === null) return;
+  ru = String(ru).trim();
+  if (!ru) return;
+  S.ultimo = '';
+  procesar(ru);
+});
+
+document.getElementById('b-enviar').addEventListener('click', function(){
+  if(S.cola.length===0){ alert('No hay registros pendientes. Todo está guardado.'); return; }
+  enviarCola();
+});
+
+
+/* ══ Cámara ══════════════════════════════════════════════ */
+function abrirCamara(){
+  var v=document.getElementById('video');
+  navigator.mediaDevices.getUserMedia({audio:false,
+    video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}
+  }).then(function(st){
+    S.stream=st; S.track=st.getVideoTracks()[0]; v.srcObject=st; return v.play();
+  }).then(function(){
+    prepararLuz();
+    if('BarcodeDetector' in window){
+      try{ S.detector=new window.BarcodeDetector({formats:['qr_code']}); }catch(e){ S.detector=null; }
+    }
+    S.pausa=false;
+    requestAnimationFrame(mirar);
+  }).catch(function(err){
+    alert('No se pudo abrir la cámara.\n\nRevisa el permiso del navegador y que la página esté en https.\n\nDetalle: '+err.name);
+    ver('p-conf');
+  });
+}
+
+function cerrarCamara(){
+  S.pausa=true;
+  if(S.stream) S.stream.getTracks().forEach(function(t){ t.stop(); });
+  S.stream=null; S.track=null; S.luz=false;
+  document.getElementById('b-luz').classList.remove('on');
+}
+
+function prepararLuz(){
+  var b=document.getElementById('b-luz');
+  var cap=(S.track&&S.track.getCapabilities)?S.track.getCapabilities():null;
+  if(!cap||!cap.torch){ b.style.display='none'; return; }
+  b.style.display='';
+  b.onclick=function(){
+    S.luz=!S.luz;
+    S.track.applyConstraints({advanced:[{torch:S.luz}]})
+      .then(function(){ b.classList.toggle('on',S.luz); })
+      .catch(function(){ b.style.display='none'; });
+  };
+}
+
+var lienzo=document.getElementById('lienzo');
+var ctx=lienzo.getContext('2d',{willReadFrequently:true});
+
+function mirar(){
+  if(S.pausa||!S.stream) return;
+  var v=document.getElementById('video');
+  if(v.readyState!==v.HAVE_ENOUGH_DATA){ requestAnimationFrame(mirar); return; }
+  if(S.detector){
+    S.detector.detect(v).then(function(c){ if(c&&c.length) procesar(c[0].rawValue); })
+      .catch(function(){ S.detector=null; })
+      .then(function(){ if(!S.pausa) requestAnimationFrame(mirar); });
+    return;
+  }
+  var ancho=480, alto=Math.round(v.videoHeight*(ancho/v.videoWidth))||360;
+  if(lienzo.width!==ancho){ lienzo.width=ancho; lienzo.height=alto; }
+  ctx.drawImage(v,0,0,ancho,alto);
+  var img=ctx.getImageData(0,0,ancho,alto);
+  var res=window.jsQR?window.jsQR(img.data,ancho,alto,{inversionAttempts:'dontInvert'}):null;
+  if(res&&res.data) procesar(res.data);
+  requestAnimationFrame(mirar);
+}
+
+
+/* ══ Reglas y registro ═══════════════════════════════════ */
+
+/** ¿Ya usó este bloque hoy? Devuelve el código que choca, o ''. */
+function choqueDeBloque(p){
+  var c = S.conf;
+  var mios = c.bloque === 3 ? [1,2] : [c.bloque];
+  var hechas = (p.h || '').split(',').filter(function(x){ return x; });
+
+  // Lo que este mismo celular registró en esta sesión
+  for (var k in S.hechos) if (S.hechos.hasOwnProperty(k)){
+    var cod = k.split('|')[1];
+    if (cod && hechas.indexOf(cod) === -1 && k.indexOf(p.r + '|') === 0) hechas.push(cod);
+  }
+
+  for (var i=0;i<hechas.length;i++){
+    var o = S.confs[hechas[i]];
+    if (!o || o.cod === c.cod) continue;
+    if (o.diaClave !== c.diaClave) continue;
+    var suyos = o.bloque === 3 ? [1,2] : [o.bloque];
+    for (var j=0;j<mios.length;j++) if (suyos.indexOf(mios[j]) > -1) return o;
+  }
+  return null;
+}
+
+function pedirPin(){
+  var p = prompt('PIN del moderador:');
+  if (p === null) return false;
+  if (String(p).trim() === '') return false;
+  S.pinPuesto = String(p).trim();
+  S.pinOk = true;
+  return true;
+}
+
+function procesar(texto){
+  var t = Date.now();
+  var ru = String(texto).trim();
+  var m = ru.match(/(\d{4,})/);
+  if (ru.indexOf('http') === 0 && m) ru = m[1];
+  if (!ru) return;
+  if (ru === S.ultimo && (t - S.tUltimo) < 2200) return;
+  S.ultimo = ru; S.tUltimo = t;
+
+  var p = S.mapa[ru];
+  if (!p){
+    if (navigator.onLine && !S.buscando[ru]){
+      S.buscando[ru] = 1;
+      mostrar('warn','?','Consultando','', ru, 'No está en la lista descargada. Buscando en el sistema…');
+      pedir({accion:'buscar',clave:S.cfg.clave,ru:ru}, function(d){
+        delete S.buscando[ru];
+        if (d && d.ok && d.persona){
+          S.mapa[ru] = d.persona; S.padron.personas.push(d.persona);
+          guardar(LL.padron, S.padron);
+          S.ultimo = ''; procesar(ru);
+        } else {
+          mostrar('bad','✕','No está inscrito','', ru,
+            'No aparece en el sistema. Pídele que llene el formulario de inscripción.');
+        }
+      }, function(){
+        delete S.buscando[ru];
+        mostrar('bad','✕','No está en la lista','', ru, 'Sin señal para verificar. Anótalo aparte.');
+      }, 8000);
+      return;
+    }
+    mostrar('bad','✕','No está en la lista','', ru, 'Revisa que se haya inscrito.');
+    return;
+  }
+
+  var llave = ru + '|' + S.conf.cod;
+  if (S.hechos[llave]){
+    mostrar('warn','!','Ya registrado', p.n, ru, 'Ya fue registrado en esta conferencia.');
+    return;
+  }
+  if ((p.h || '').split(',').indexOf(S.conf.cod) > -1){
+    mostrar('warn','!','Ya registrado', p.n, ru, 'Ya figura en el sistema para esta conferencia.');
+    return;
+  }
+
+  var esMod = S.padron.quien.rol === 'Moderador';
+  var est = estadoConf(S.conf);
+
+  // ── Fuera de horario ──
+  if (est !== 'activa' && !S.pinOk){
+    var txt = est === 'pronto'
+      ? 'El escaneo todavía no abre. Abre ' + S.padron.reglas.antes + ' minutos antes del inicio.'
+      : 'Pasaron los ' + S.padron.reglas.despues + ' minutos. Solo el moderador puede registrar ahora.';
+    mostrar('bad','✕', est === 'pronto' ? 'Aún no abre' : 'Fuera de horario', p.n, ru, txt);
+    if (est === 'cerrada' && esMod && confirm('¿Registrar con el PIN del moderador?')) pedirPin();
+    return;
+  }
+
+  // ── Bloque ya usado hoy ──
+  var choque = choqueDeBloque(p);
+  if (choque && !S.pinOk){
+    mostrar('bad','✕','Bloque ya usado', p.n, ru,
+      'Hoy ya asistió a ' + choque.exp + ' (' + choque.hora + '), del mismo bloque.');
+    return;
+  }
+
+  // ── Otro grupo: doble escaneo ──
+  var otroGrupo = String(p.g) !== String(S.conf.g);
+  if (otroGrupo && !S.pinOk){
+    if (!S.espera[llave]){
+      S.espera[llave] = 1; guardar(LL.espera, S.espera); contadores();
+      var suyo = (S.padron.grupos[p.g] && S.padron.grupos[p.g].nombre) || ('grupo ' + p.g);
+      mostrar('warn','→','Otro grupo · a la fila', p.n, ru,
+        'Es de ' + suyo + '. Que espere en la fila aparte. Vuelve a escanearlo cuando le toque entrar.');
+      return;
+    }
+    if (!S.otros){
+      mostrar('warn','!','Todavía en espera', p.n, ru,
+        'Ya está en la fila. Activa el botón "Otros grupos" cuando confirmes que hay espacio.');
+      return;
+    }
+  }
+
+  registrar(ru, p, llave, otroGrupo);
+}
+
+function registrar(ru, p, llave, otroGrupo){
+  var tipo = S.pinOk ? 'T' : (otroGrupo ? 'O' : 'N');
+  S.hechos[llave] = 1; guardar(LL.hechos, S.hechos);
+  if (S.espera[llave]){ delete S.espera[llave]; guardar(LL.espera, S.espera); }
+  S.cola.push({ r:ru, c:S.conf.cod, t:Date.now(), x:tipo });
+  guardar(LL.cola, S.cola);
+  contadores();
+  enviarCola();
+
+  if (tipo === 'T') mostrar('ok','✓','Registro tardío · PIN', p.n, ru, 'Queda marcado como excepción del moderador.');
+  else if (tipo === 'O') mostrar('ok','✓','Registrado · otro grupo', p.n, ru, 'Le cuenta para su certificado.');
+  else mostrar('ok','✓','Asistencia registrada', p.n, ru, '');
+}
+
+function mostrar(tipo,sim,est,nombre,ru,msg){
+  var f=document.getElementById('flash');
+  document.getElementById('f-sim').textContent=sim;
+  document.getElementById('f-est').textContent=est;
+  document.getElementById('f-quien').textContent=nombre;
+  document.getElementById('f-ru').textContent=ru;
+  document.getElementById('f-msg').textContent=msg;
+  f.className=tipo; f.style.display='flex';
+  vibrar(tipo); pitar(tipo);
+  clearTimeout(mostrar.reloj);
+  mostrar.reloj=setTimeout(function(){ f.style.display='none'; }, tipo==='ok'?850:2100);
+}
+
+function vibrar(t){
+  if(!navigator.vibrate) return;
+  navigator.vibrate(t==='ok'?45:(t==='warn'?[55,60,55]:[95,70,95]));
+}
+
+var audio=null;
+function pitar(t){
+  try{
+    if(!audio) audio=new (window.AudioContext||window.webkitAudioContext)();
+    if(audio.state==='suspended') audio.resume();
+    var o=audio.createOscillator(), g=audio.createGain();
+    o.connect(g); g.connect(audio.destination); o.type='sine';
+    o.frequency.value=t==='ok'?1180:(t==='warn'?720:330);
+    g.gain.setValueAtTime(0.0001,audio.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.17,audio.currentTime+0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001,audio.currentTime+0.15);
+    o.start(); o.stop(audio.currentTime+0.16);
+  }catch(e){}
+}
+
+function contadores(){
+  if(!S.conf) return;
+  var suf = '|' + S.conf.cod, n = 0, e = 0;
+  for(var k in S.hechos) if(S.hechos.hasOwnProperty(k) && k.indexOf(suf) > -1) n++;
+  for(var j in S.espera) if(S.espera.hasOwnProperty(j) && j.indexOf(suf) > -1) e++;
+  document.getElementById('m-total').textContent=n;
+  document.getElementById('m-espera').textContent=e;
+  document.getElementById('m-pend').textContent=S.cola.length;
+  var b=document.getElementById('b-enviar');
+  var atascado = S.cola.length>0 && (Date.now()-S.ultimoEnvioOk)>120000;
+  b.classList.toggle('alerta', atascado);
+  b.textContent = atascado ? 'Enviar ya' : 'Enviar';
+}
+
+
+/* ══ Sincronización ══════════════════════════════════════ */
+function enviarCola(){
+  if(S.sincro||S.cola.length===0) return;
+  S.sincro=true;
+  var lote=S.cola.slice(0,40);
+  var txt=lote.map(function(x){ return x.r+'|'+x.c+'|'+x.t+'|'+x.x; }).join(';;');
+
+  pedir({accion:'sincroniza',clave:S.cfg.clave,datos:txt}, function(d){
+    S.sincro=false;
+    if(d&&d.ok){
+      S.cola=S.cola.slice(lote.length);
+      guardar(LL.cola,S.cola);
+      S.ultimoEnvioOk=Date.now();
+      contadores();
+      if(S.cola.length>0) setTimeout(enviarCola,400);
+    } else if (d && d.error){
+      S.ultimoEnvioOk = Date.now();
+      if (d.error.indexOf('bloquead') > -1 || d.error.indexOf('reconocido') > -1){
+        alert('El servidor rechazó tu código:\n\n' + d.error +
+              '\n\nAvisa a la organización. Tus registros siguen guardados en el celular.');
+      }
+    }
+  }, function(){ S.sincro=false; }, 20000);
+}
+
+function refrescoSilencioso(){
+  if(!navigator.onLine || !S.cfg) return;
+  // Más seguido si hay una conferencia abierta: achica la ventana del bloque
+  var cada = (S.conf && estadoConf(S.conf) === 'activa') ? 60000 : 300000;
+  if(Date.now() - S.ultimoPadron < cada) return;
+  bajarPadron(null);
+}
+
+setInterval(function(){ enviarCola(); contadores(); refrescoSilencioso(); }, 12000);
+window.addEventListener('online', function(){ enviarCola(); refrescoSilencioso(); });
+
+
+/* ══ Arranque ════════════════════════════════════════════ */
+(function iniciar(){
+  S.cola=leer(LL.cola)||[];
+  S.hechos=leer(LL.hechos)||{};
+  S.espera=leer(LL.espera)||{};
+
+  var cfg=leer(LL.cfg), padron=leer(LL.padron);
+  if(cfg&&padron){
+    S.cfg=cfg; S.padron=padron;
+    if(!S.padron.reglas) S.padron.reglas={antes:45,despues:10};
+    indexar(); irAGrupos(); enviarCola();
+    bajarPadron(null);
+  } else {
+    ver('p-config');
+  }
+
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
+
+  if('wakeLock' in navigator){
+    var pedirLock=function(){
+      if(document.visibilityState==='visible') navigator.wakeLock.request('screen').catch(function(){});
+    };
+    document.addEventListener('visibilitychange',pedirLock);
+    pedirLock();
+  }
+})();
+</script>
+</body>
+</html>
