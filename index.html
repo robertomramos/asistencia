@@ -143,7 +143,7 @@ input::placeholder{color:#5A738F}
 #flash .quien{font-family:var(--display);font-size:clamp(28px,8.5vw,44px);font-weight:800;
   line-height:.98;color:#fff;overflow-wrap:break-word}
 #flash .ru{font-family:var(--mono);font-size:16px;color:rgba(255,255,255,.8);margin-top:12px;letter-spacing:.08em}
-#flash .msg{font-size:15px;color:rgba(255,255,255,.92);margin-top:16px;line-height:1.5;max-width:330px}
+#flash .msg{font-size:15px;color:rgba(255,255,255,.92);margin-top:16px;line-height:1.5;max-width:340px;white-space:pre-line}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 .pie{text-align:center;font-size:11px;color:#5A738F;margin-top:20px;line-height:1.7}
 </style>
@@ -223,7 +223,7 @@ input::placeholder{color:#5A738F}
     <div class="barra-inf">
       <div class="marcador">
         <div class="dato"><div class="v" id="m-total">0</div><div class="k">Registrados</div></div>
-        <div class="dato espera"><div class="v" id="m-espera">0</div><div class="k">En fila</div></div>
+        <div class="dato espera"><div class="v" id="m-espera">0</div><div class="k">Rechazados</div></div>
         <div class="dato pend"><div class="v" id="m-pend">0</div><div class="k">Por enviar</div></div>
       </div>
       <button class="mini" id="b-otros">Otros grupos</button>
@@ -469,7 +469,9 @@ function refrescarEstado(){
 
 /* ══ Conferencias ════════════════════════════════════════ */
 function estadoConf(c){
-  var t = ahora(), r = S.padron.reglas;
+  var r = S.padron.reglas;
+  if (r.horario === false) return 'activa';   // corte desactivado desde la hoja
+  var t = ahora();
   if (t < c.ini - r.antes*60000)  return 'pronto';
   if (t > c.ini + r.despues*60000) return 'cerrada';
   return 'activa';
@@ -486,7 +488,7 @@ function irAConfs(g){
     .sort(function(a,b){ return a.n-b.n; })
     .forEach(function(x){
       var est = estadoConf(x);
-      var tengo = esMod || !!S.padron.quien.turnos[x.cod];
+      var tengo = esMod || S.padron.reglas.turno === false || !!S.padron.quien.turnos[x.cod];
       var b=document.createElement('button');
       b.className='sem'; b.setAttribute('data-estado', est);
       var badge = est==='activa' ? '<span class="badge abierta">Abierta ahora</span>'
@@ -581,6 +583,8 @@ document.getElementById('b-otros').addEventListener('click', function(){
   S.otros = !S.otros;
   this.classList.toggle('on', S.otros);
   this.textContent = S.otros ? 'Otros ✓' : 'Otros grupos';
+  if (S.otros) mostrar('ok','✓','Ingreso abierto a otros grupos','','',
+    'Ahora los de otro grupo se registran al escanear.\nAvisa a los demás equipos de esta puerta que hagan lo mismo.');
 });
 
 document.getElementById('b-manual').addEventListener('click', function(){
@@ -752,28 +756,24 @@ function procesar(texto){
   }
 
   // ── Bloque ya usado hoy ──
-  var choque = choqueDeBloque(p);
+  var choque = (S.padron.reglas.bloque === false) ? null : choqueDeBloque(p);
   if (choque && !S.pinOk){
     mostrar('bad','✕','Bloque ya usado', p.n, ru,
       'Hoy ya asistió a ' + choque.exp + ' (' + choque.hora + '), del mismo bloque.');
     return;
   }
 
-  // ── Otro grupo: doble escaneo ──
+  // ── Otro grupo: entra solo cuando la puerta se abre ──
+  // El estado vive en el botón, no en este celular, para que el
+  // segundo escaneo funcione lo haga quien lo haga.
   var otroGrupo = String(p.g) !== String(S.conf.g);
-  if (otroGrupo && !S.pinOk){
-    if (!S.espera[llave]){
-      S.espera[llave] = 1; guardar(LL.espera, S.espera); contadores();
-      var suyo = (S.padron.grupos[p.g] && S.padron.grupos[p.g].nombre) || ('grupo ' + p.g);
-      mostrar('warn','→','Otro grupo · a la fila', p.n, ru,
-        'Es de ' + suyo + '. Que espere en la fila aparte. Vuelve a escanearlo cuando le toque entrar.');
-      return;
-    }
-    if (!S.otros){
-      mostrar('warn','!','Todavía en espera', p.n, ru,
-        'Ya está en la fila. Activa el botón "Otros grupos" cuando confirmes que hay espacio.');
-      return;
-    }
+  if (otroGrupo && !S.otros && !S.pinOk){
+    S.espera[llave] = 1; guardar(LL.espera, S.espera); contadores();
+    var suyo = (S.padron.grupos[p.g] && S.padron.grupos[p.g].nombre) || ('grupo ' + p.g);
+    mostrar('bad','✕','NO registrado · otro grupo', p.n, ru,
+      'Es de ' + suyo + '. Que espere en la fila aparte.\n' +
+      'Cuando entren los del grupo y haya espacio, activa "Otros grupos" y escanéalo otra vez.');
+    return;
   }
 
   registrar(ru, p, llave, otroGrupo);
@@ -782,7 +782,7 @@ function procesar(texto){
 function registrar(ru, p, llave, otroGrupo){
   var tipo = S.pinOk ? 'T' : (otroGrupo ? 'O' : 'N');
   S.hechos[llave] = 1; guardar(LL.hechos, S.hechos);
-  if (S.espera[llave]){ delete S.espera[llave]; guardar(LL.espera, S.espera); }
+  if (S.espera[llave]){ delete S.espera[llave]; guardar(LL.espera, S.espera); }   // sale de la fila
   S.cola.push({ r:ru, c:S.conf.cod, t:Date.now(), x:tipo });
   guardar(LL.cola, S.cola);
   contadores();
@@ -833,6 +833,8 @@ function contadores(){
   for(var j in S.espera) if(S.espera.hasOwnProperty(j) && j.indexOf(suf) > -1) e++;
   document.getElementById('m-total').textContent=n;
   document.getElementById('m-espera').textContent=e;
+  var bo=document.getElementById('b-otros');
+  bo.classList.toggle('alerta', e>0 && !S.otros);
   document.getElementById('m-pend').textContent=S.cola.length;
   var b=document.getElementById('b-enviar');
   var atascado = S.cola.length>0 && (Date.now()-S.ultimoEnvioOk)>120000;
@@ -887,7 +889,13 @@ window.addEventListener('online', function(){ enviarCola(); refrescoSilencioso()
   var cfg=leer(LL.cfg), padron=leer(LL.padron);
   if(cfg&&padron){
     S.cfg=cfg; S.padron=padron;
-    if(!S.padron.reglas) S.padron.reglas={antes:45,despues:10};
+    if(!S.padron.reglas) S.padron.reglas={};
+    var r = S.padron.reglas;
+    if (typeof r.antes   !== 'number')  r.antes   = 45;
+    if (typeof r.despues !== 'number')  r.despues = 10;
+    if (typeof r.bloque  !== 'boolean') r.bloque  = true;
+    if (typeof r.horario !== 'boolean') r.horario = true;
+    if (typeof r.turno   !== 'boolean') r.turno   = true;
     indexar(); irAGrupos(); enviarCola();
     bajarPadron(null);
   } else {

@@ -1,13 +1,17 @@
-/* Service worker del escáner de asistencia · OAD 2026
-   Guarda la página y la librería de lectura de QR en el celular
-   para que el escáner abra aunque no haya señal. */
+/* Service worker · OAD 2026
+   ───────────────────────────────────────────────────────────
+   Las páginas se piden SIEMPRE a la red primero, para que una
+   corrección subida a GitHub llegue al celular en la siguiente
+   apertura. La copia guardada queda como respaldo, y es la que
+   permite que el escáner abra sin señal.
 
-const CACHE = 'oad-2026-v1';
+   Las librerías y los logos sí van desde la caché: no cambian.
+   ─────────────────────────────────────────────────────────── */
 
-const ARCHIVOS = [
-  './',
-  './index.html',
-  './tablero.html',
+const CACHE = 'oad-2026-v4';
+
+const PAGINAS = ['./', './index.html', './tablero.html'];
+const FIJOS = [
   './manifest.json',
   './logo-oad.png',
   './logo-carrera.png',
@@ -17,7 +21,7 @@ const ARCHIVOS = [
 self.addEventListener('install', function (e) {
   e.waitUntil(
     caches.open(CACHE)
-      .then(function (c) { return c.addAll(ARCHIVOS); })
+      .then(function (c) { return c.addAll(PAGINAS.concat(FIJOS)); })
       .then(function () { return self.skipWaiting(); })
   );
 });
@@ -33,24 +37,49 @@ self.addEventListener('activate', function (e) {
 });
 
 self.addEventListener('fetch', function (e) {
-  const url = e.request.url;
+  const req = e.request;
+  const url = req.url;
 
-  // Las llamadas a Apps Script nunca se guardan en caché: siempre
-  // deben ir a la red o fallar, para que la cola reintente.
+  // Nunca se cachean las llamadas al servidor ni los QR
   if (url.indexOf('script.google.com') > -1 ||
       url.indexOf('googleusercontent') > -1 ||
       url.indexOf('qrserver.com') > -1) return;
 
-  e.respondWith(
-    caches.match(e.request).then(function (guardado) {
-      if (guardado) return guardado;
-      return fetch(e.request).then(function (resp) {
-        if (resp && resp.status === 200 && e.request.method === 'GET') {
+  if (req.method !== 'GET') return;
+
+  const esPagina = req.mode === 'navigate' ||
+                   url.indexOf('.html') > -1 ||
+                   url.endsWith('/');
+
+  if (esPagina) {
+    // Red primero: así llegan las correcciones
+    e.respondWith(
+      fetch(req).then(function (resp) {
+        if (resp && resp.status === 200) {
           const copia = resp.clone();
-          caches.open(CACHE).then(function (c) { c.put(e.request, copia); });
+          caches.open(CACHE).then(function (c) { c.put(req, copia); });
         }
         return resp;
-      }).catch(function () { return caches.match('./index.html'); });
+      }).catch(function () {
+        return caches.match(req).then(function (g) {
+          return g || caches.match('./index.html');
+        });
+      })
+    );
+    return;
+  }
+
+  // Todo lo demás: caché primero
+  e.respondWith(
+    caches.match(req).then(function (g) {
+      if (g) return g;
+      return fetch(req).then(function (resp) {
+        if (resp && resp.status === 200) {
+          const copia = resp.clone();
+          caches.open(CACHE).then(function (c) { c.put(req, copia); });
+        }
+        return resp;
+      });
     })
   );
 });
