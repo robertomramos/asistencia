@@ -124,9 +124,33 @@ body{font-family:var(--texto);background:var(--noche);color:var(--hueso);
 'use strict';
 
 /* Pega aquí la misma URL /exec de la aplicación web. */
-var API = 'https://script.google.com/macros/s/AKfycby4rKqKIhq4z-q-useCmkDHsDktB-e1vG_OtMJwmyooM40ltD1PBPRL7k-Ww8zt1js/exec';
+var API = 'PEGAR_AQUI_LA_URL_DE_LA_APLICACION_WEB';
 
 var jn = 0;
+
+/* Intenta fetch primero (atraviesa los escudos de Brave, Firefox
+   estricto y similares) y cae a JSONP solo si fetch falla. */
+function pedir(params, ok, fallo, ms){
+  ms = ms || 15000;
+  var q = [];
+  for (var k in params) if (params.hasOwnProperty(k))
+    q.push(encodeURIComponent(k) + '=' + encodeURIComponent(params[k]));
+  var url = API + (API.indexOf('?') > -1 ? '&' : '?') + q.join('&');
+
+  var ctl = null, reloj = null;
+  try { ctl = new AbortController(); reloj = setTimeout(function(){ ctl.abort(); }, ms); } catch(e){}
+  var op = { method:'GET', redirect:'follow' };
+  if (ctl) op.signal = ctl.signal;
+
+  try {
+    fetch(url, op).then(function(r){
+      if (reloj) clearTimeout(reloj);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(ok).catch(function(){ jsonp(params, ok, fallo, ms); });
+  } catch(e) { jsonp(params, ok, fallo, ms); }
+}
+
 function jsonp(params, ok, fallo, ms){
   var nombre = '__t' + (++jn) + '_' + Date.now();
   var s = document.createElement('script');
@@ -193,7 +217,7 @@ function pintar(d){
 }
 
 function actualizar(){
-  jsonp({ accion:'tablero' }, function(d){
+  pedir({ accion:'tablero' }, function(d){
     if (d && d.ok){
       pintar(d);
       document.getElementById('latido').textContent = 'En vivo';
