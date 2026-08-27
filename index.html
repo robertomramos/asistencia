@@ -138,6 +138,9 @@ input::placeholder{color:#5A738F}
   animation:entra .15s cubic-bezier(.2,.9,.3,1)}
 @keyframes entra{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
 #flash.ok{background:var(--ok)}#flash.warn{background:var(--warn)}#flash.bad{background:var(--bad)}
+#flash.envio{background:var(--panel)}
+#flash.envio .sim{animation:late 1s infinite}
+@keyframes late{0%,100%{opacity:.3}50%{opacity:1}}
 #flash .sim{font-family:var(--display);font-size:66px;font-weight:800;line-height:.8;margin-bottom:14px}
 #flash .est{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.75);font-weight:700;margin-bottom:12px}
 #flash .quien{font-family:var(--display);font-size:clamp(28px,8.5vw,44px);font-weight:800;
@@ -756,7 +759,8 @@ function procesar(texto){
   }
 
   // ── Bloque ya usado hoy ──
-  var choque = (S.padron.reglas.bloque === false) ? null : choqueDeBloque(p);
+  var exento = (S.padron.reglas.exentos || []).indexOf(Number(p.g)) > -1;
+  var choque = (S.padron.reglas.bloque === false || exento) ? null : choqueDeBloque(p);
   if (choque && !S.pinOk){
     mostrar('bad','✕','Bloque ya usado', p.n, ru,
       'Hoy ya asistió a ' + choque.exp + ' (' + choque.hora + '), del mismo bloque.');
@@ -779,18 +783,47 @@ function procesar(texto){
   registrar(ru, p, llave, otroGrupo);
 }
 
+/**
+ * El verde aparece SOLO cuando el servidor confirma que guardó.
+ * Si no hay señal, la asistencia no se pierde: queda en la cola
+ * y la pantalla lo dice con claridad, en naranja, para que el
+ * personal sepa que ese registro todavía no está arriba.
+ */
 function registrar(ru, p, llave, otroGrupo){
   var tipo = S.pinOk ? 'T' : (otroGrupo ? 'O' : 'N');
   S.hechos[llave] = 1; guardar(LL.hechos, S.hechos);
-  if (S.espera[llave]){ delete S.espera[llave]; guardar(LL.espera, S.espera); }   // sale de la fila
-  S.cola.push({ r:ru, c:S.conf.cod, t:Date.now(), x:tipo });
-  guardar(LL.cola, S.cola);
-  contadores();
-  enviarCola();
+  if (S.espera[llave]){ delete S.espera[llave]; guardar(LL.espera, S.espera); }
 
-  if (tipo === 'T') mostrar('ok','✓','Registro tardío · PIN', p.n, ru, 'Queda marcado como excepción del moderador.');
-  else if (tipo === 'O') mostrar('ok','✓','Registrado · otro grupo', p.n, ru, 'Le cuenta para su certificado.');
-  else mostrar('ok','✓','Asistencia registrada', p.n, ru, '');
+  var item = { r:ru, c:S.conf.cod, t:Date.now(), x:tipo };
+  var linea = ru + '|' + S.conf.cod + '|' + item.t + '|' + tipo;
+
+  mostrar('envio','···','Enviando…', p.n, ru, '');
+
+  var resuelto = false;
+  var alaCola = function(motivo){
+    if (resuelto) return; resuelto = true;
+    S.cola.push(item); guardar(LL.cola, S.cola); contadores();
+    mostrar('warn','!','GUARDADO · sin enviar', p.n, ru,
+      motivo + '\nQueda pendiente en este celular. Busca señal y toca "Enviar".');
+  };
+
+  pedir({ accion:'sincroniza', clave:S.cfg.clave, datos:linea }, function(d){
+    if (resuelto) return;
+    if (d && d.ok && d.recibidos > 0){
+      resuelto = true;
+      S.ultimoEnvioOk = Date.now();
+      contadores();
+      if (tipo === 'T') mostrar('ok','✓','Registrado · PIN', p.n, ru, 'Queda marcado como excepción del moderador.');
+      else if (tipo === 'O') mostrar('ok','✓','Registrado · otro grupo', p.n, ru, 'Le cuenta para su certificado.');
+      else mostrar('ok','✓','Asistencia registrada', p.n, ru, 'Confirmado en el sistema.');
+    } else if (d && d.error){
+      resuelto = true;
+      mostrar('bad','✕','Rechazado', p.n, ru, d.error);
+      delete S.hechos[llave]; guardar(LL.hechos, S.hechos); contadores();
+    } else {
+      alaCola('El servidor no confirmó.');
+    }
+  }, function(){ alaCola('Sin conexión en este momento.'); }, 7000);
 }
 
 function mostrar(tipo,sim,est,nombre,ru,msg){
@@ -896,8 +929,15 @@ window.addEventListener('online', function(){ enviarCola(); refrescoSilencioso()
     if (typeof r.bloque  !== 'boolean') r.bloque  = true;
     if (typeof r.horario !== 'boolean') r.horario = true;
     if (typeof r.turno   !== 'boolean') r.turno   = true;
+    if (!r.exentos) r.exentos = [];
     indexar(); irAGrupos(); enviarCola();
     bajarPadron(null);
+    if (S.cola.length > 0){
+      setTimeout(function(){
+        alert('Atención: hay ' + S.cola.length + ' registro(s) de antes que todavía ' +
+              'no se subieron al sistema.\n\nConéctate a internet y toca "Enviar".');
+      }, 900);
+    }
   } else {
     ver('p-config');
   }
