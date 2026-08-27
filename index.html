@@ -273,7 +273,7 @@ var S = {
   cola:[], hechos:{}, espera:{},
   ultimo:'', tUltimo:0, pausa:false,
   stream:null, track:null, luz:false, detector:null,
-  sincro:false, ultimoEnvioOk:Date.now(), buscando:{},
+  sincro:false, ultimoEnvioOk:Date.now(), ultimoAviso:0, buscando:{},
   ultimoPadron:0, desfase:0, otros:false, pinOk:false,
   ticReloj:null
 };
@@ -802,6 +802,14 @@ function registrar(ru, p, llave, otroGrupo){
   var resuelto = false;
   var alaCola = function(motivo){
     if (resuelto) return; resuelto = true;
+
+    if (S.padron.reglas.soloOnline){
+      // Solo en línea: no se guarda nada a medias
+      delete S.hechos[llave]; guardar(LL.hechos, S.hechos); contadores();
+      mostrar('bad','✕','NO REGISTRADO', p.n, ru,
+        motivo + '\nBusca señal y vuelve a escanear a esta persona.');
+      return;
+    }
     S.cola.push(item); guardar(LL.cola, S.cola); contadores();
     mostrar('warn','!','GUARDADO · sin enviar', p.n, ru,
       motivo + '\nQueda pendiente en este celular. Busca señal y toca "Enviar".');
@@ -892,10 +900,14 @@ function enviarCola(){
       contadores();
       if(S.cola.length>0) setTimeout(enviarCola,400);
     } else if (d && d.error){
-      S.ultimoEnvioOk = Date.now();
-      if (d.error.indexOf('bloquead') > -1 || d.error.indexOf('reconocido') > -1){
-        alert('El servidor rechazó tu código:\n\n' + d.error +
-              '\n\nAvisa a la organización. Tus registros siguen guardados en el celular.');
+      // El servidor rechazó el lote entero: la cola no avanza.
+      // Hay que avisarlo, o los registros se quedan ahí sin que nadie lo note.
+      if (Date.now() - S.ultimoAviso > 60000){
+        S.ultimoAviso = Date.now();
+        alert('⚠️ EL SERVIDOR RECHAZÓ TUS REGISTROS\n\n' + d.error +
+              '\n\nHay ' + S.cola.length + ' asistencia(s) que NO están subiendo.\n\n' +
+              'Avisa a la organización ahora. No cierres la app ni toques Desconectar: ' +
+              'los registros siguen guardados aquí.');
       }
     }
   }, function(){ S.sincro=false; }, 20000);
@@ -930,6 +942,7 @@ window.addEventListener('online', function(){ enviarCola(); refrescoSilencioso()
     if (typeof r.horario !== 'boolean') r.horario = true;
     if (typeof r.turno   !== 'boolean') r.turno   = true;
     if (!r.exentos) r.exentos = [];
+    if (typeof r.soloOnline !== 'boolean') r.soloOnline = false;
     indexar(); irAGrupos(); enviarCola();
     bajarPadron(null);
     if (S.cola.length > 0){
