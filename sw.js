@@ -8,7 +8,7 @@
    Las librerías y los logos sí van desde la caché: no cambian.
    ─────────────────────────────────────────────────────────── */
 
-const CACHE = 'oad-2026-v6';
+const CACHE = 'oad-2026-v7';
 
 const PAGINAS = ['./', './index.html', './tablero.html'];
 const FIJOS = [

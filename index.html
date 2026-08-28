@@ -124,6 +124,14 @@ input::placeholder{color:#5A738F}
   border-radius:10px;color:var(--hueso);font-size:12.5px;font-weight:600;font-family:var(--texto);cursor:pointer}
 .mini.on{background:var(--oro);color:var(--panel);border-color:var(--oro)}
 .mini.alerta{background:var(--warn);border-color:var(--warn);color:#1C1000}
+.mini.retiro{background:#B34A6B;border-color:#B34A6B;color:#fff}
+.mini.obs{background:#B8860B;border-color:#B8860B;color:#fff}
+#cintaModo{position:absolute;top:calc(env(safe-area-inset-top) + 96px);left:0;right:0;
+  text-align:center;pointer-events:none;display:none}
+#cintaModo span{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  padding:6px 16px;border-radius:99px;display:inline-block;color:#fff}
+#cintaModo.retiro span{background:#B34A6B}
+#cintaModo.obs span{background:#B8860B}
 
 #reloj{position:absolute;top:calc(env(safe-area-inset-top) + 62px);left:0;right:0;
   text-align:center;pointer-events:none}
@@ -222,6 +230,7 @@ input::placeholder{color:#5A738F}
       <button class="mini" id="b-volver">Cambiar</button>
     </div>
     <div id="reloj"><span id="reloj-txt">—</span></div>
+    <div id="cintaModo"><span id="cintaModo-txt"></span></div>
     <div class="mira"><div class="marco"><i></i><i></i><i></i><i></i></div></div>
     <div class="barra-inf">
       <div class="marcador">
@@ -229,6 +238,7 @@ input::placeholder{color:#5A738F}
         <div class="dato espera"><div class="v" id="m-espera">0</div><div class="k">Rechazados</div></div>
         <div class="dato pend"><div class="v" id="m-pend">0</div><div class="k">Por enviar</div></div>
       </div>
+      <button class="mini" id="b-modo">Marca: A</button>
       <button class="mini" id="b-otros">Otros grupos</button>
       <button class="mini" id="b-manual">Manual</button>
       <button class="mini" id="b-enviar">Enviar</button>
@@ -274,7 +284,7 @@ var S = {
   ultimo:'', tUltimo:0, pausa:false,
   stream:null, track:null, luz:false, detector:null,
   sincro:false, ultimoEnvioOk:Date.now(), ultimoAviso:0, buscando:{},
-  ultimoPadron:0, desfase:0, otros:false, pinOk:false,
+  ultimoPadron:0, desfase:0, otros:false, pinOk:false, modo:'A',
   ticReloj:null
 };
 
@@ -517,7 +527,10 @@ document.getElementById('b-atras').addEventListener('click', function(){
 });
 
 function elegir(x){
-  S.conf=x; S.otros=false; S.pinOk=false;
+  S.conf=x; S.otros=false; S.pinOk=false; S.modo='A';
+  var bm=document.getElementById('b-modo');
+  bm.className='mini'; bm.textContent='Marca: A';
+  document.getElementById('cintaModo').style.display='none';
   document.getElementById('b-otros').classList.remove('on');
   document.getElementById('b-otros').textContent='Otros grupos';
   document.getElementById('c-nombre').textContent=x.exp;
@@ -577,6 +590,39 @@ function pararReloj(){ if (S.ticReloj){ clearInterval(S.ticReloj); S.ticReloj=nu
 
 
 /* ══ Botones de la barra ═════════════════════════════════ */
+/* Marca que se aplicará al siguiente escaneo:
+   A = asistió · R = abandonó · O = observado */
+var MODOS = {
+  A: { txt:'Marca: A',          clase:'',       cinta:'',                       nombre:'asistencia' },
+  R: { txt:'Marca: ABANDONO',   clase:'retiro', cinta:'Marcando ABANDONO',      nombre:'abandono' },
+  O: { txt:'Marca: OBSERVADO',  clase:'obs',    cinta:'Marcando OBSERVADO',     nombre:'observación' }
+};
+
+document.getElementById('b-modo').addEventListener('click', function(){
+  var orden = ['A','R','O'];
+  var i = orden.indexOf(S.modo);
+  S.modo = orden[(i+1) % orden.length];
+
+  var m = MODOS[S.modo];
+  this.className = 'mini ' + m.clase;
+  this.textContent = m.txt;
+
+  var c = document.getElementById('cintaModo');
+  c.className = m.clase;
+  c.style.display = S.modo === 'A' ? 'none' : 'block';
+  document.getElementById('cintaModo-txt').textContent = m.cinta;
+
+  if (S.modo === 'R') {
+    mostrar('warn','R','Modo abandono', '', '',
+      'Los siguientes escaneos se marcarán como ABANDONO y NO contarán como asistencia.\n' +
+      'Vuelve a tocar el botón para cambiar.');
+  } else if (S.modo === 'O') {
+    mostrar('warn','O','Modo observado', '', '',
+      'Los siguientes escaneos se marcarán como OBSERVADO y NO contarán como asistencia.\n' +
+      'Vuelve a tocar el botón para cambiar.');
+  }
+});
+
 document.getElementById('b-otros').addEventListener('click', function(){
   if (!S.otros){
     if (!confirm('Abrir el ingreso a estudiantes de otros grupos.\n\n' +
@@ -736,13 +782,29 @@ function procesar(texto){
   }
 
   var llave = ru + '|' + S.conf.cod;
-  if (S.hechos[llave]){
-    mostrar('warn','!','Ya registrado', p.n, ru, 'Ya fue registrado en esta conferencia.');
-    return;
-  }
-  if ((p.h || '').split(',').indexOf(S.conf.cod) > -1){
-    mostrar('warn','!','Ya registrado', p.n, ru, 'Ya figura en el sistema para esta conferencia.');
-    return;
+  var yaTiene = (p.h || '').split(',').indexOf(S.conf.cod) > -1;
+
+  // En modo abandono u observado sí se permite corregir una A previa
+  if (S.modo === 'A'){
+    if (S.hechos[llave]){
+      mostrar('warn','!','Ya registrado', p.n, ru, 'Ya fue registrado en esta conferencia.');
+      return;
+    }
+    if (yaTiene){
+      mostrar('warn','!','Ya registrado', p.n, ru, 'Ya figura en el sistema para esta conferencia.');
+      return;
+    }
+
+    // Tope de conferencias del grupo
+    var g = S.padron.grupos[p.g];
+    var tope = (g && g.tope) ? g.tope : 99;
+    var lleva = (p.h || '').split(',').filter(function(x){ return x; }).length;
+    if (lleva >= tope){
+      mostrar('bad','✕','Tope alcanzado', p.n, ru,
+        'Ya tiene ' + lleva + ' de ' + tope + ' conferencias, el máximo para su año.\n' +
+        'No se registran más.');
+      return;
+    }
   }
 
   var esMod = S.padron.quien.rol === 'Moderador';
@@ -771,7 +833,7 @@ function procesar(texto){
   // El estado vive en el botón, no en este celular, para que el
   // segundo escaneo funcione lo haga quien lo haga.
   var otroGrupo = String(p.g) !== String(S.conf.g);
-  if (otroGrupo && !S.otros && !S.pinOk){
+  if (otroGrupo && !S.otros && !S.pinOk && S.modo === 'A'){
     S.espera[llave] = 1; guardar(LL.espera, S.espera); contadores();
     var suyo = (S.padron.grupos[p.g] && S.padron.grupos[p.g].nombre) || ('grupo ' + p.g);
     mostrar('bad','✕','NO registrado · otro grupo', p.n, ru,
@@ -790,7 +852,12 @@ function procesar(texto){
  * personal sepa que ese registro todavía no está arriba.
  */
 function registrar(ru, p, llave, otroGrupo){
-  var tipo = S.pinOk ? 'T' : (otroGrupo ? 'O' : 'N');
+  var tipo;
+  if (S.modo === 'R')      tipo = 'R';          // abandono
+  else if (S.modo === 'O') tipo = 'B';          // observado
+  else if (S.pinOk)        tipo = 'T';          // tardío con PIN
+  else if (otroGrupo)      tipo = 'G';          // otro grupo
+  else                     tipo = 'N';          // normal
   S.hechos[llave] = 1; guardar(LL.hechos, S.hechos);
   if (S.espera[llave]){ delete S.espera[llave]; guardar(LL.espera, S.espera); }
 
@@ -821,8 +888,12 @@ function registrar(ru, p, llave, otroGrupo){
       resuelto = true;
       S.ultimoEnvioOk = Date.now();
       contadores();
-      if (tipo === 'T') mostrar('ok','✓','Registrado · PIN', p.n, ru, 'Queda marcado como excepción del moderador.');
-      else if (tipo === 'O') mostrar('ok','✓','Registrado · otro grupo', p.n, ru, 'Le cuenta para su certificado.');
+      if (tipo === 'R') mostrar('warn','R','ABANDONO registrado', p.n, ru,
+        'Queda como abandono. NO le cuenta como asistencia.');
+      else if (tipo === 'B') mostrar('warn','O','OBSERVADO registrado', p.n, ru,
+        'Queda observado. NO le cuenta como asistencia.');
+      else if (tipo === 'T') mostrar('ok','✓','Registrado · PIN', p.n, ru, 'Excepción del moderador.');
+      else if (tipo === 'G') mostrar('ok','✓','Registrado · otro grupo', p.n, ru, 'Le cuenta para su certificado.');
       else mostrar('ok','✓','Asistencia registrada', p.n, ru, 'Confirmado en el sistema.');
     } else if (d && d.error){
       resuelto = true;
