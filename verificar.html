@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0B3A6B">
+<title>Verificación de certificado · Contaduría Pública UMSA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=IBM+Plex+Mono:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════
+   Verificación pública de certificados · OAD 2026
+
+   Esta página no consulta ningún servidor: lee el archivo
+   certificados.js que está junto a ella. Por eso funciona
+   indefinidamente, sin depender de ninguna cuenta de Google.
+   ═══════════════════════════════════════════════════════════ */
+:root{
+  --tinta:#12294A; --noche:#0B3A6B; --oro:#C9982A; --cielo:#1B7FC4;
+  --papel:#F4F2ED; --linea:#E3E0D8; --gris:#6C7A90;
+  --verde:#0B5C33; --rojo:#B3261E;
+  --display:"Cinzel",Georgia,serif;
+  --texto:"IBM Plex Sans",-apple-system,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--texto);background:var(--papel);color:var(--tinta);
+  min-height:100vh;padding:0 0 44px;line-height:1.5}
+
+.top{background:var(--noche);padding:24px 20px 22px;text-align:center;position:relative}
+.top::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;
+  background:linear-gradient(90deg,var(--oro) 0 50%,var(--cielo) 50% 100%)}
+.esc{display:flex;justify-content:center;align-items:center;gap:20px;margin-bottom:12px}
+.esc img{height:48px;display:block}
+.esc img.r{width:48px;border-radius:50%}
+.top .k{font-size:9px;letter-spacing:.22em;text-transform:uppercase;
+  color:#F0B323;font-weight:700}
+.top h1{font-family:var(--display);font-size:21px;font-weight:700;color:#fff;
+  margin-top:7px;letter-spacing:1px}
+
+.w{max-width:480px;margin:0 auto;padding:22px 16px 0}
+
+.veredicto{border-radius:16px;padding:28px 22px;text-align:center;margin-bottom:14px}
+.veredicto.ok{background:#DCF3E4;border:2px solid #16A34A}
+.veredicto.mal{background:#FDE4E4;border:2px solid var(--rojo)}
+.veredicto.espera{background:#fff;border:1px solid var(--linea)}
+.veredicto .ico{font-size:46px;line-height:1;margin-bottom:10px}
+.veredicto .t{font-family:var(--display);font-size:21px;font-weight:700;letter-spacing:.5px}
+.veredicto .s{font-size:13.5px;margin-top:8px;opacity:.82;line-height:1.55}
+
+.c{background:#fff;border:1px solid var(--linea);border-radius:16px;
+  padding:20px;margin-bottom:13px}
+.rot{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:#8A6400;margin-bottom:13px}
+.nom{font-size:23px;font-weight:700;line-height:1.2;letter-spacing:-.01em}
+.ru{font-family:var(--mono);font-size:13px;color:var(--gris);margin-top:6px;letter-spacing:.05em}
+
+.fila{display:flex;justify-content:space-between;gap:16px;padding:9px 0;
+  border-bottom:1px solid var(--papel);font-size:14px}
+.fila:last-child{border-bottom:0}
+.fila .e{color:var(--gris);flex-shrink:0}
+.fila .v{font-weight:600;text-align:right}
+
+.cf{padding:11px 0;border-bottom:1px solid var(--papel)}
+.cf:last-child{border-bottom:0}
+.cf .t{font-size:14px;font-weight:600;line-height:1.38}
+.cf .e{font-size:12.5px;color:var(--gris);margin-top:4px;line-height:1.42}
+
+.cod{font-family:var(--mono);font-size:19px;font-weight:700;letter-spacing:.14em;
+  text-align:center;background:var(--papel);border-radius:10px;padding:13px}
+
+label{display:block;font-size:11px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--gris);margin-bottom:9px}
+input{width:100%;padding:14px;border:1.5px solid #CFCBC0;border-radius:11px;
+  font-size:18px;font-family:var(--mono);font-weight:600;letter-spacing:.1em;
+  background:var(--papel);color:var(--tinta);text-transform:uppercase;text-align:center}
+input:focus{outline:none;border-color:var(--tinta);background:#fff}
+button{width:100%;padding:15px;margin-top:11px;background:var(--tinta);color:#fff;
+  border:0;border-radius:11px;font-size:15px;font-weight:600;
+  font-family:var(--texto);cursor:pointer}
+button:active{background:var(--noche)}
+
+.pie{text-align:center;font-size:11px;color:#A9A396;margin-top:22px;line-height:1.8}
+#detalle{display:none}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="esc">
+    <img src="logo-carrera.png" alt="Carrera de Contaduría Pública" onerror="this.style.display='none'">
+    <img class="r" src="logo-oad.png" alt="OAD" onerror="this.style.display='none'">
+  </div>
+  <p class="k">Carrera de Contaduría Pública · UMSA</p>
+  <h1>VERIFICACIÓN DE CERTIFICADO</h1>
+</header>
+
+<main class="w">
+  <div class="veredicto espera" id="veredicto">
+    <div class="ico">⏳</div>
+    <div class="t">CARGANDO</div>
+    <div class="s">Un momento, por favor.</div>
+  </div>
+
+  <div class="c" id="buscador" style="display:none">
+    <label for="cod">Código del certificado</label>
+    <input id="cod" placeholder="XXXX-XXXX" maxlength="9" autocomplete="off">
+    <button onclick="buscar()">Verificar</button>
+  </div>
+
+  <div id="detalle"></div>
+
+  <p class="pie">
+    Organización de Auxiliares de Docencia · Gestión 2026<br>
+    Carrera de Contaduría Pública · Universidad Mayor de San Andrés
+  </p>
+</main>
+
+<script src="certificados.js" onerror="sinDatos()"></script>
+<script>
+'use strict';
+
+function esc(t){
+  return String(t == null ? '' : t)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function veredicto(clase, ico, titulo, sub){
+  var v = document.getElementById('veredicto');
+  v.className = 'veredicto ' + clase;
+  v.innerHTML = '<div class="ico">' + ico + '</div><div class="t">' + titulo + '</div>' +
+                (sub ? '<div class="s">' + sub + '</div>' : '');
+}
+
+function sinDatos(){
+  veredicto('mal','!','NO SE PUDO VERIFICAR',
+    'No se encontró el registro de certificados. Vuelve a intentar en unos minutos.');
+}
+
+function normaliza(c){
+  c = String(c || '').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if (c.length === 8) c = c.slice(0,4) + '-' + c.slice(4);
+  return c;
+}
+
+function mostrar(codigo){
+  var d = (window.CERTIFICADOS || {})[codigo];
+  var det = document.getElementById('detalle');
+
+  if (!d){
+    veredicto('mal','✕','CERTIFICADO NO VÁLIDO',
+      'No existe ningún certificado con el código <b>' + esc(codigo) + '</b>.');
+    det.style.display = 'none';
+    document.getElementById('buscador').style.display = 'block';
+    return;
+  }
+
+  var M = window.CERT_META || {};
+  var C = window.CERT_CONF || [];
+
+  veredicto('ok','✓','CERTIFICADO VÁLIDO',
+    'Emitido por la Carrera de Contaduría Pública<br>y registrado en el sistema de la organización.');
+
+  var lista = '';
+  for (var i = 0; i < d[4].length; i++){
+    var c = C[d[4][i]];
+    if (!c) continue;
+    lista += '<div class="cf"><div class="t">' + esc(c[1]) + '</div>' +
+             '<div class="e">' + esc(c[0]) + ' · ' + esc(c[2]) + ' · ' + esc(c[3]) + '</div></div>';
+  }
+
+  det.innerHTML =
+    '<div class="c"><p class="rot">Otorgado a</p>' +
+      '<div class="nom">' + esc(d[0]) + '</div>' +
+      '<div class="ru">RU ' + esc(d[1]) + ' · ' + esc(d[2]) + '° año · ' + esc(d[3]) + '</div></div>' +
+
+    '<div class="c"><p class="rot">Detalle</p>' +
+      '<div class="fila"><span class="e">Evento</span><span class="v">' + esc(M.evento) + '</span></div>' +
+      '<div class="fila"><span class="e">Fechas</span><span class="v">' + esc(M.fechas) + '</span></div>' +
+      '<div class="fila"><span class="e">Resolución HCF</span><span class="v">N° ' + esc(M.resolucion) + '</span></div>' +
+      '<div class="fila"><span class="e">Carga horaria</span><span class="v">' + esc(M.horas) + ' horas académicas</span></div>' +
+      '<div class="fila"><span class="e">Conferencias acreditadas</span><span class="v">' + d[4].length + '</span></div></div>' +
+
+    '<div class="c"><p class="rot">Conferencias acreditadas</p>' + lista + '</div>' +
+
+    '<div class="c"><p class="rot">Código del certificado</p>' +
+      '<div class="cod">' + esc(codigo) + '</div></div>';
+
+  det.style.display = 'block';
+  document.getElementById('buscador').style.display = 'none';
+}
+
+function buscar(){
+  var c = normaliza(document.getElementById('cod').value);
+  if (!c){
+    veredicto('mal','!','FALTA EL CÓDIGO','Escribe el código que aparece en el certificado.');
+    return;
+  }
+  mostrar(c);
+  history.replaceState(null,'','?c=' + c);
+}
+
+document.getElementById('cod').addEventListener('keypress', function(e){
+  if (e.key === 'Enter') buscar();
+});
+
+(function iniciar(){
+  if (!window.CERTIFICADOS){ sinDatos(); return; }
+
+  var m = location.search.match(/[?&]c=([^&]+)/);
+  var c = m ? normaliza(decodeURIComponent(m[1])) : '';
+
+  if (c){ mostrar(c); return; }
+
+  veredicto('espera','🔎','VERIFICAR UN CERTIFICADO',
+    'Escanea el código QR del certificado, o escribe su código a mano.');
+  document.getElementById('buscador').style.display = 'block';
+  document.getElementById('cod').focus();
+})();
+</script>
+</body>
+</html>
